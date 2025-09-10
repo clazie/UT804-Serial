@@ -61,125 +61,129 @@ def calcValue(s: str, corr: int = 0) -> float:
 
 
 print(ser.name)
-while True:
-  line: bytes = ser.readline()
+try:
+  while True:
+    line: bytes = ser.readline()
 
-  if (len(line) > 8):  # Minimum length of a valid line
-    Log('-----------------------')
-    Log(f'Line: {line}')
-    measurement: str = line[6:7].decode('ascii')
+    if (len(line) > 8):  # Minimum length of a valid line
+      Log('-----------------------')
+      Log(f'Line: {line}')
+      measurement: str = line[6:7].decode('ascii')
 
-    match (line[7:8].decode('ascii')):
-      case '0':
-        acdc = 'DC'
-      case '1':
-        acdc = 'AC'
-      case '3':
-        acdc = 'AC+DC'
-      case _:  # Unknown
-        acdc = ''
+      match (line[7:8].decode('ascii')):
+        case '0':
+          acdc = 'DC'
+        case '1':
+          acdc = 'AC'
+        case '3':
+          acdc = 'AC+DC'
+        case _:  # Unknown
+          acdc = ''
 
-    valuestr = ''
-    match measurement:
-      case '1':  # VDC
-        print('DC Voltage measurement')
-        value: float = calcValue(line)
-        valuestr = f'{value} V {acdc}'
+      valuestr = ''
+      match measurement:
+        case '1':  # VDC
+          print('DC Voltage measurement')
+          value: float = calcValue(line)
+          valuestr = f'{value} V {acdc}'
 
-      case '2':  # VAC
-        print('AC Voltage measurement')
-        value: float = calcValue(line)
-        valuestr = f'{value} V {acdc}'
+        case '2':  # VAC
+          print('AC Voltage measurement')
+          value: float = calcValue(line)
+          valuestr = f'{value} V {acdc}'
 
-      case '3':  # mVDC
-        print('DC Millivolt measurement')
-        value: float = calcValue(line, 3)
-        valuestr = f'{value} mV {acdc}'
+        case '3':  # mVDC
+          print('DC Millivolt measurement')
+          value: float = calcValue(line, 3)
+          valuestr = f'{value} mV {acdc}'
 
-      case '<':  # Frequency (Hz, %)
-        if(line[8:9].decode('ascii') == '1'):
-          print('Frequency measurement')
+        case '<':  # Frequency (Hz, %)
+          if(line[8:9].decode('ascii') == '1'):
+            print('Frequency measurement')
+            value: float = calcValue(line, 2)
+            valuestr = f'{value} Hz'
+          elif(line[8:9].decode('ascii') == '5'):
+            print('Duty cycle measurement')
+            value: float = -1 * calcValue(line, 3)
+            valuestr = f'{value} %'
+
+        case '4':  # Ohm
+          print('Resistance measurement')
+          value: float = calcValue(line, 2)  # Corr factor 10 for Ohm
+          valuestr = f'{value} Ohm'
+
+        case ';':  # Diode (V)
+          print('Diode measurement')
+          value: float = calcValue(line, 1)  # Corr factor 10 for Ohm
+          valuestr = f'{value} V'
+
+        case ':':  # Continuity
+          print('Continuity measurement')
+          value: float = calcValue(line, 2)  # Corr factor 10 for Ohm
+          valuestr = f'{value} Ohm'
+
+        case '5':  # Capacitance
+          print('Capacitance measurement')
+          value: float = calcValue(line, -2)
+          valuestr = f'{value} uF'
+
+        case '6':  # Temperature (°C)
+          print('Temperature measurement')
+          value: float = calcValue(line, 4)
+          valuestr = f'{value} °C'
+
+        case '=':  # Temperature (°F)
+          print('Temperature measurement')
+          value: float = calcValue(line, 4)
+          valuestr = f'{value} °F'
+
+        case '7':  # uA
+          print('Microampere measurement')
+          value: float = calcValue(line, 3)
+          valuestr = f'{value} uA {acdc}'
+
+        case '8':  # mA
+          print('Milliampere measurement')
           value: float = calcValue(line, 2)
-          valuestr = f'{value} Hz'
-        elif(line[8:9].decode('ascii') == '5'):
-          print('Duty cycle measurement')
-          value: float = -1 * calcValue(line, 3)
+          valuestr = f'{value} mA {acdc}'
+
+        case '?':  # %
+          print('Dutycycle measurement')
+          value: float = calcValue(line, 3)
           valuestr = f'{value} %'
 
-      case '4':  # Ohm
-        print('Resistance measurement')
-        value: float = calcValue(line, 2)  # Corr factor 10 for Ohm
-        valuestr = f'{value} Ohm'
+        case '9':  # A
+          print('Ampere measurement')
+          value: float = calcValue(line, 1)
+          valuestr = f'{value} A {acdc}'
 
-      case ';':  # Diode (V)
-        print('Diode measurement')
-        value: float = calcValue(line, 1)  # Corr factor 10 for Ohm
-        valuestr = f'{value} V'
+        case '_':
+          print(f'Unknown measurement type: {measurement}')
+          value: float = calcValue(line)
+          valuestr = f'{value} Unknown unit {acdc}'
 
-      case ':':  # Continuity
-        print('Continuity measurement')
-        value: float = calcValue(line, 2)  # Corr factor 10 for Ohm
-        valuestr = f'{value} Ohm'
+      print(f'{OKGREEN}Value: {valuestr}{ENDC}')
 
-      case '5':  # Capacitance
-        print('Capacitance measurement')
-        value: float = calcValue(line, -2)
-        valuestr = f'{value} uF'
+    if (len(line) > 5):
+      tmp: str = line[5:6].decode('ascii')
+      Log(f'Char 5: {tmp} (Factor)')
+    if (len(line) > 6):
+      tmp: str = line[6:7].decode('ascii')
+      Log(f'Char 6: {tmp} (Function)')
+    if (len(line) > 7):
+      tmp: str = line[7:8].decode('ascii')
+      Log(f'Char 7: {tmp} ({acdc})')
+    if (len(line) > 8):
+      tmp: str = line[8:9].decode('ascii')
+      Log(f'Char 8: {tmp} (Sign)')
+    if (len(line) > 9):
+      tmp: str = ord(line[9:10])
+      Log(f'Char 9: 0x{tmp}')
+    if (len(line) > 10):
+      tmp: str = ord(line[10:11])
+      Log(f'Char 10: 0x{tmp}')
+except KeyboardInterrupt:
+  print('Exiting program')
 
-      case '6':  # Temperature (°C)
-        print('Temperature measurement')
-        value: float = calcValue(line, 4)
-        valuestr = f'{value} °C'
-
-      case '=':  # Temperature (°F)
-        print('Temperature measurement')
-        value: float = calcValue(line, 4)
-        valuestr = f'{value} °F'
-
-      case '7':  # uA
-        print('Microampere measurement')
-        value: float = calcValue(line, 3)
-        valuestr = f'{value} uA {acdc}'
-
-      case '8':  # mA
-        print('Milliampere measurement')
-        value: float = calcValue(line, 2)
-        valuestr = f'{value} mA {acdc}'
-
-      case '?':  # %
-        print('Dutycycle measurement')
-        value: float = calcValue(line, 3)
-        valuestr = f'{value} %'
-
-      case '9':  # A
-        print('Ampere measurement')
-        value: float = calcValue(line, 1)
-        valuestr = f'{value} A {acdc}'
-
-      case '_':
-        print(f'Unknown measurement type: {measurement}')
-        value: float = calcValue(line)
-        valuestr = f'{value} Unknown unit {acdc}'
-
-    print(f'{OKGREEN}Value: {valuestr}{ENDC}')
-
-  if (len(line) > 5):
-    tmp: str = line[5:6].decode('ascii')
-    Log(f'Char 5: {tmp} (Factor)')
-  if (len(line) > 6):
-    tmp: str = line[6:7].decode('ascii')
-    Log(f'Char 6: {tmp} (Function)')
-  if (len(line) > 7):
-    tmp: str = line[7:8].decode('ascii')
-    Log(f'Char 7: {tmp} ({acdc})')
-  if (len(line) > 8):
-    tmp: str = line[8:9].decode('ascii')
-    Log(f'Char 8: {tmp} (Sign)')
-  if (len(line) > 9):
-    tmp: str = ord(line[9:10])
-    Log(f'Char 9: 0x{tmp}')
-  if (len(line) > 10):
-    tmp: str = ord(line[10:11])
-    Log(f'Char 10: 0x{tmp}')
-
+ser.close()
 exit(0)
